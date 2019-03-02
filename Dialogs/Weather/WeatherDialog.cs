@@ -1,6 +1,9 @@
 ﻿using System;
+using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using BasicBot.Dialogs.Weather.Models;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
@@ -8,6 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BasicBot.Dialogs.Weather
 {
+   
     public class WeatherDialog : ComponentDialog
     {
         // User state for greeting dialog
@@ -16,12 +20,18 @@ namespace BasicBot.Dialogs.Weather
 
         // Prompts names
         private const string CityPrompt = "cityPrompt";
+        private const string ForecastTypePrompt = "forecastTypePrompt";
 
         // Minimum length requirements for city and name
         private const int CityLengthMinValue = 3;
 
         // Dialog IDs
         private const string ProfileDialog = "profileDialog";
+
+        // Weather API
+        private const string WeatherApi = "https://api.openweathermap.org/data/2.5/";
+        private const string WeatherApiSettings = "&units=metric&APPID=f2b3af247004bf8543677aa8cb2a20de";
+        private const string BadRequest = "Bad request";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WeatherDialog"/> class.
@@ -101,6 +111,32 @@ namespace BasicBot.Dialogs.Weather
             }
         }
 
+        private async Task<DialogTurnResult> PromptForForecastTypeStepAsync(
+                                                       WaterfallStepContext stepContext,
+                                                       CancellationToken cancellationToken)
+        {
+            var weatherState = await WeatherAccessor.GetAsync(stepContext.Context);
+
+            if (string.IsNullOrWhiteSpace(weatherState.ForecastType))
+            {
+
+                var opts = new PromptOptions
+                {
+                    Prompt = new Activity
+                    {
+                        Type = ActivityTypes.Suggestion,
+                        //Text = $"Hello {greetingState.Name}, what city do you live in?",
+                        Text = $"Hello, what city do you want to get weather in?",
+                    },
+                };
+                return await stepContext.PromptAsync(CityPrompt, opts);
+            }
+            else
+            {
+                return await stepContext.NextAsync();
+            }
+        }
+
         private async Task<DialogTurnResult> DisplayWeatherStateStepAsync(
                                                     WaterfallStepContext stepContext,
                                                     CancellationToken cancellationToken)
@@ -150,9 +186,51 @@ namespace BasicBot.Dialogs.Weather
             var weatherState = await WeatherAccessor.GetAsync(context);
 
             // Display their profile information and end dialog.
-            await context.SendActivityAsync($"The weather in your city {weatherState.City}:");
-            //await context.SendActivityAsync($"Hi {greetingState.Name}, from {greetingState.City}, nice to meet you!");
+            var weatherResult = GetCurrentWeather(weatherState.City, "weather");
+            if (weatherResult == BadRequest)
+            {
+                await WeatherAccessor.SetAsync(stepContext.Context, new WeatherState());
+                await context.SendActivityAsync($"Wrong city name.");
+            }
+            else
+            {
+                await context.SendActivityAsync($"The weather in your city {weatherState.City}:" +
+                $"\n{GetCurrentWeather(weatherState.City, "weather")}");
+            }
+
             return await stepContext.EndDialogAsync();
+        }
+
+        private string GetCurrentWeather(string city, string weatherType)
+        {
+            //https://api.openweathermap.org/data/2.5/weather?q=Rivne&units=metric&APPID=f2b3af247004bf8543677aa8cb2a20de"));
+            string weatherResult = string.Empty;
+            try
+            {
+                HttpWebRequest WebReq = (HttpWebRequest)WebRequest.
+                Create(string.Format(WeatherApi + weatherType + "?q=" + city + WeatherApiSettings));
+
+                WebReq.Method = "GET";
+
+                HttpWebResponse WebResp = (HttpWebResponse)WebReq.GetResponse();
+
+                string jsonString;
+                using (Stream stream = WebResp.GetResponseStream())
+                {
+                    StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+                    jsonString = reader.ReadToEnd();
+                }
+
+                CurrentWeather weather = CurrentWeather.FromJson(jsonString);
+                weatherResult = $"temperature {(int)weather.Main.Temp} °C" +
+                $"\nhumidity {weather.Main.Humidity} %";
+            }
+            catch (Exception e)
+            {
+                weatherResult = BadRequest;
+            }
+
+            return weatherResult;
         }
     }
 }

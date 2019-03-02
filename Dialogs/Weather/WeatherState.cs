@@ -8,5 +8,6 @@ namespace BasicBot.Dialogs.Weather
     public class WeatherState
     {
         public string City { get; set; }
+        public string ForecastType { get; set; }
     }
 }
