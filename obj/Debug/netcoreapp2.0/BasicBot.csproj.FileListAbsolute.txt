@@ -1,0 +1,12 @@
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\SergeBotSdk4.bot
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\BasicBot.deps.json
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\BasicBot.runtimeconfig.json
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\BasicBot.runtimeconfig.dev.json
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\BasicBot.dll
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\bin\Debug\netcoreapp2.0\BasicBot.pdb
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.csprojAssemblyReference.cache
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.csproj.CoreCompileInputs.cache
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.AssemblyInfoInputs.cache
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.AssemblyInfo.cs
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.dll
+C:\Users\smelnyk1\source\repos\SergeBotSdk4-src\obj\Debug\netcoreapp2.0\BasicBot.pdb
