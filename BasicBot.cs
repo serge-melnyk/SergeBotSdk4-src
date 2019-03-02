@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BasicBot.Dialogs.Weather;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
@@ -24,6 +25,7 @@ namespace Microsoft.BotBuilderSamples
         public const string GreetingIntent = "Greeting";
         public const string CancelIntent = "Cancel";
         public const string HelpIntent = "Help";
+        public const string WeatherIntent = "Weather";
         public const string NoneIntent = "None";
 
         /// <summary>
@@ -34,6 +36,7 @@ namespace Microsoft.BotBuilderSamples
 
         private readonly IStatePropertyAccessor<GreetingState> _greetingStateAccessor;
         private readonly IStatePropertyAccessor<DialogState> _dialogStateAccessor;
+        private readonly IStatePropertyAccessor<WeatherState> _weatherStateAccessor;
         private readonly UserState _userState;
         private readonly ConversationState _conversationState;
         private readonly BotServices _services;
@@ -51,6 +54,7 @@ namespace Microsoft.BotBuilderSamples
 
             _greetingStateAccessor = _userState.CreateProperty<GreetingState>(nameof(GreetingState));
             _dialogStateAccessor = _conversationState.CreateProperty<DialogState>(nameof(DialogState));
+            _weatherStateAccessor = _conversationState.CreateProperty<WeatherState>(nameof(WeatherState));
 
             // Verify LUIS configuration.
             if (!_services.LuisServices.ContainsKey(LuisConfiguration))
@@ -60,6 +64,7 @@ namespace Microsoft.BotBuilderSamples
 
             Dialogs = new DialogSet(_dialogStateAccessor);
             Dialogs.Add(new GreetingDialog(_greetingStateAccessor, loggerFactory));
+            Dialogs.Add(new WeatherDialog(_weatherStateAccessor, loggerFactory));
         }
 
         private DialogSet Dialogs { get; set; }
@@ -116,6 +121,10 @@ namespace Microsoft.BotBuilderSamples
                             {
                                 case GreetingIntent:
                                     await dc.BeginDialogAsync(nameof(GreetingDialog));
+                                    break;
+
+                                case WeatherIntent:
+                                    await dc.BeginDialogAsync(nameof(WeatherDialog));
                                     break;
 
                                 case NoneIntent:
