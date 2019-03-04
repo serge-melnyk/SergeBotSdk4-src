@@ -365,14 +365,20 @@ namespace BasicBot.Dialogs.Weather
         private ReceiptCard GetReceiptCard(string city, WeatherForecast weatherForecast)
         {
             var weatherItems = new List<ReceiptItem>();
+            int maxItemsCount = 3;
+            int startNum = 0;
             foreach (var item in weatherForecast.List)
             {
-                string imageUrl = "http://openweathermap.org/img/w/" + item.Weather[0].Icon + ".png";
-                string temp = item.Main.Temp > 0 ? "+" + ((int)item.Main.Temp).ToString() : ((int)item.Main.Temp).ToString();
-                weatherItems.Add(new ReceiptItem(
-                    item.DtTxt.ToString(),
-                    price: temp,
-                    image: new CardImage(url: imageUrl)));
+                if (startNum < maxItemsCount)
+                {
+                    string imageUrl = "http://openweathermap.org/img/w/" + item.Weather[0].Icon + ".png";
+                    string temp = item.Main.Temp > 0 ? "+" + ((int)item.Main.Temp).ToString() : ((int)item.Main.Temp).ToString();
+                    weatherItems.Add(new ReceiptItem(
+                        item.DtTxt.DateTime.ToShortTimeString(),
+                        price: temp,
+                        image: new CardImage(url: imageUrl)));
+                }
+                ++startNum;
             }
 
             var receiptCard = new ReceiptCard
