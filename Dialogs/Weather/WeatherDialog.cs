@@ -349,7 +349,7 @@ namespace BasicBot.Dialogs.Weather
         {
             var heroCard = new ThumbnailCard
             {
-                Title = $"Current weather in {city}:",
+                Title = $"{city}:",
                 Subtitle = DateTime.Now.ToShortTimeString(),
                 Text = $"temperature {(int)weather.Main.Temp} °C" +
                     $"\nhumidity {weather.Main.Humidity} %",

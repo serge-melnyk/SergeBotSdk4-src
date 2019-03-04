@@ -240,11 +240,14 @@ namespace Microsoft.BotBuilderSamples
             {
                 // Get latest GreetingState
                 var greetingState = await _greetingStateAccessor.GetAsync(turnContext, () => new GreetingState());
+                var weatherState = await _weatherStateAccessor.GetAsync(turnContext, () => new WeatherState());
                 var entities = luisResult.Entities;
 
                 // Supported LUIS Entities
                 string[] userNameEntities = { "userName", "userName_patternAny" };
                 string[] userLocationEntities = { "userLocation", "userLocation_patternAny" };
+                string[] forecastTypeEntities = { "forecastType" };
+                string[] weatherCityEntities = { "weatherCity" };
 
                 // Update any entities
                 // Note: Consider a confirm dialog, instead of just updating.
@@ -271,8 +274,31 @@ namespace Microsoft.BotBuilderSamples
                     }
                 }
 
+                foreach (var forecastType in forecastTypeEntities)
+                {
+                    if (entities[forecastType] != null)
+                    {
+                        // Capitalize and set new city.
+                        var newForecast = (string)entities[forecastType][0];
+                        weatherState.ForecastType = char.ToUpper(newForecast[0]) + newForecast.Substring(1);
+                        break;
+                    }
+                }
+
+                foreach (var weatherCity in weatherCityEntities)
+                {
+                    if (entities[weatherCity] != null)
+                    {
+                        // Capitalize and set new city.
+                        var newWeatherCity = (string)entities[weatherCity][0];
+                        weatherState.City = char.ToUpper(newWeatherCity[0]) + newWeatherCity.Substring(1);
+                        break;
+                    }
+                }
+
                 // Set the new values into state.
                 await _greetingStateAccessor.SetAsync(turnContext, greetingState);
+                await _weatherStateAccessor.SetAsync(turnContext, weatherState);
             }
         }
     }
