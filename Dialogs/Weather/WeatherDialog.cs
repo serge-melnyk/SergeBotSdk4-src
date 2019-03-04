@@ -262,7 +262,11 @@ namespace BasicBot.Dialogs.Weather
                     // Cards are sent as Attachments in the Bot Framework.
                     // So we need to create a list of attachments on the activity.
                     reply.Attachments = new List<Attachment>();
-                    reply.Attachments.Add(GetReceiptCard(weatherState.City, weatherForecast).ToAttachment());
+                    var forecastAttachments = GetForecastCards(weatherState.City, weatherForecast);
+                    foreach (var item in forecastAttachments)
+                    {
+                        reply.Attachments.Add(item.ToAttachment());
+                    }
 
                     // Send the card(s) to the user as an attachment to the activity
                     await context.SendActivityAsync(reply);
@@ -354,6 +358,41 @@ namespace BasicBot.Dialogs.Weather
             };
 
             return heroCard;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="ThumbnailCard"/>.
+        /// </summary>
+        /// <returns>A <see cref="ThumbnailCard"/> the user can view and/or interact with.</returns>
+        /// <remarks>Related types <see cref="CardImage"/>, <see cref="CardAction"/>,
+        /// and <see cref="ActionTypes"/>.</remarks>
+        private List<ThumbnailCard> GetForecastCards(string city, WeatherForecast weatherForecast)
+        {
+            var weatherItems = new List<ThumbnailCard>();
+            int maxItemsCount = 3;
+            int startNum = 0;
+            foreach (var item in weatherForecast.List)
+            {
+                if (startNum < maxItemsCount)
+                {
+                    string imageUrl = "http://openweathermap.org/img/w/" + item.Weather[0].Icon + ".png";
+                    string temp = item.Main.Temp > 0 ? "+" + ((int)item.Main.Temp).ToString() : ((int)item.Main.Temp).ToString();
+                    var weatherCard = new ThumbnailCard
+                    {
+                        Title = $"{city} {item.DtTxt.DateTime.ToShortDateString()}:",
+                        Subtitle = item.DtTxt.DateTime.ToShortTimeString(),
+                        Text = $"temperature {temp} °C" +
+                    $"\nhumidity {item.Main.Humidity} %",
+                        Images = new List<CardImage> { new CardImage("http://openweathermap.org/img/w/" + item.Weather[0].Icon + ".png") },
+                        Buttons = new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "More information", value: "https://openweathermap.org/find?q=" + city) },
+                    };
+
+                    weatherItems.Add(weatherCard);
+                }
+                ++startNum;
+            }
+
+            return weatherItems;
         }
 
         /// <summary>
