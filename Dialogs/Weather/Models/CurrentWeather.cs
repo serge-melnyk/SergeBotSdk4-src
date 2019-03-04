@@ -10,6 +10,8 @@ namespace BasicBot.Dialogs.Weather.Models
 {
     public partial class CurrentWeather
     {
+        public string RequestType { get; set; }
+
         [JsonProperty("coord")]
         public Coord Coord { get; set; }
 

@@ -24,14 +24,17 @@ namespace BasicBot.Dialogs.Weather
         private const string CityPrompt = "cityPrompt";
         private const string ForecastTypePrompt = "forecastTypePrompt";
 
-        // Minimum length requirements for city and name
+        // Minimum length requirements for city and type
         private const int CityLengthMinValue = 3;
+        private const int ForecastTypeLengthMinValue = 3;
 
         // Dialog IDs
         private const string ProfileDialog = "profileDialog";
 
         // Weather API
         private const string WeatherApi = "https://api.openweathermap.org/data/2.5/";
+        private const string WeatherApiCurrent = "https://api.openweathermap.org/data/2.5/weather?q=";
+        private const string WeatherApiForecast = "https://api.openweathermap.org/data/2.5/forecast?q=";
         private const string WeatherApiSettings = "&units=metric&APPID=f2b3af247004bf8543677aa8cb2a20de";
         private const string BadRequest = "Bad request";
         private const string ForecastType = "forecast";
@@ -41,7 +44,7 @@ namespace BasicBot.Dialogs.Weather
         /// Initializes a new instance of the <see cref="WeatherDialog"/> class.
         /// </summary>
         /// <param name="botServices">Connected services used in processing.</param>
-        /// <param name="botState">The <see cref="UserState"/> for storing properties at user-scope.</param>
+        /// <param name="weatherStateAccessor">The <see cref="WeatherState"/> for storing properties at user-scope.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> that enables logging and tracing.</param>
         public WeatherDialog(IStatePropertyAccessor<WeatherState> weatherStateAccessor, ILoggerFactory loggerFactory)
             : base(nameof(WeatherDialog))
@@ -131,7 +134,7 @@ namespace BasicBot.Dialogs.Weather
                     Prompt = new Activity
                     {
                         Type = ActivityTypes.Message,
-                        SuggestedActions = new SuggestedActions() {  Actions = new List<CardAction>()
+                        SuggestedActions = new SuggestedActions() { Actions = new List<CardAction>()
                             {
                                 new CardAction() { Title = "Current", Type = ActionTypes.ImBack, Value = "current" },
                                 new CardAction() { Title = "Forecast", Type = ActionTypes.ImBack, Value = "forecast" },
@@ -207,7 +210,7 @@ namespace BasicBot.Dialogs.Weather
             }
             else
             {
-                await promptContext.Context.SendActivityAsync($"City names needs to be at least `{CityLengthMinValue}` characters long.");
+                await promptContext.Context.SendActivityAsync($"Forecast type needs to be at least `{ForecastTypeLengthMinValue}` characters long.");
                 return false;
             }
         }
@@ -223,30 +226,62 @@ namespace BasicBot.Dialogs.Weather
                 choosenForecastType = CurrentType;
             }
 
-            // Display their profile information and end dialog.
-            var weatherResult = GetCurrentWeather(weatherState.City, choosenForecastType);
-            if (weatherResult == BadRequest)
+            if (choosenForecastType == CurrentType)
             {
-                await WeatherAccessor.SetAsync(stepContext.Context, new WeatherState());
-                await context.SendActivityAsync($"Wrong city name.");
+                var currentWeather = GetCurrentWeather(weatherState.City);
+                if (currentWeather.RequestType == BadRequest)
+                {
+                    await WeatherAccessor.SetAsync(stepContext.Context, new WeatherState());
+                    await context.SendActivityAsync($"Wrong city name.");
+                }
+                else
+                {
+                    var reply = context.Activity.CreateReply();
+
+                    // Cards are sent as Attachments in the Bot Framework.
+                    // So we need to create a list of attachments on the activity.
+                    reply.Attachments = new List<Attachment>();
+                    reply.Attachments.Add(GetHeroCard(weatherState.City, currentWeather).ToAttachment());
+
+                    // Send the card(s) to the user as an attachment to the activity
+                    await context.SendActivityAsync(reply);
+                }
             }
             else
             {
-                await context.SendActivityAsync($"The weather in your city {weatherState.City}:" +
-                $"\n{GetCurrentWeather(weatherState.City, choosenForecastType)}");
+                var weatherForecast = GetWeatherForecast(weatherState.City);
+                if (weatherForecast.RequestType == BadRequest)
+                {
+                    await WeatherAccessor.SetAsync(stepContext.Context, new WeatherState());
+                    await context.SendActivityAsync($"Wrong city name.");
+                }
+                else
+                {
+                    var reply = context.Activity.CreateReply();
+
+                    // Cards are sent as Attachments in the Bot Framework.
+                    // So we need to create a list of attachments on the activity.
+                    reply.Attachments = new List<Attachment>();
+                    reply.Attachments.Add(GetReceiptCard(weatherState.City, weatherForecast).ToAttachment());
+
+                    // Send the card(s) to the user as an attachment to the activity
+                    await context.SendActivityAsync(reply);
+                }
             }
+
+            await WeatherAccessor.SetAsync(stepContext.Context, new WeatherState());
 
             return await stepContext.EndDialogAsync();
         }
 
-        private string GetCurrentWeather(string city, string weatherType)
+        private CurrentWeather GetCurrentWeather(string city)
         {
             //https://api.openweathermap.org/data/2.5/weather?q=Rivne&units=metric&APPID=f2b3af247004bf8543677aa8cb2a20de"));
-            string weatherResult = string.Empty;
+            CurrentWeather weatherResult = null;
             try
             {
                 HttpWebRequest WebReq = (HttpWebRequest)WebRequest.
-                Create(string.Format(WeatherApi + weatherType + "?q=" + city + WeatherApiSettings));
+                Create(string.Format(WeatherApiCurrent + city + WeatherApiSettings));
 
                 WebReq.Method = "GET";
 
@@ -259,30 +294,102 @@ namespace BasicBot.Dialogs.Weather
                     jsonString = reader.ReadToEnd();
                 }
 
-                if (weatherType == CurrentType)
-                {
-                    CurrentWeather weather = CurrentWeather.FromJson(jsonString);
-                    weatherResult = $"temperature {(int)weather.Main.Temp} °C" +
-                    $"\nhumidity {weather.Main.Humidity} %";
-                }
-                else
-                {
-                    WeatherForecast weatherForecast = WeatherForecast.FromJson(jsonString);
-                    foreach (var item in weatherForecast.List)
-                    {
-                        weatherResult += $"\n**{item.DtTxt}**" +
-                            $"\ntemperature {(int)item.Main.Temp} °C" +
-                            $"\nhumidity {item.Main.Humidity} %";
-                    }
-                }
-
+                weatherResult = CurrentWeather.FromJson(jsonString);
             }
             catch (Exception e)
             {
-                weatherResult = BadRequest;
+                weatherResult = new CurrentWeather() { RequestType = BadRequest};
             }
 
             return weatherResult;
+        }
+
+        private WeatherForecast GetWeatherForecast(string city)
+        {
+            //https://api.openweathermap.org/data/2.5/forecast?q=Rivne&units=metric&APPID=f2b3af247004bf8543677aa8cb2a20de"));
+            WeatherForecast weatherResult = null;
+            try
+            {
+                HttpWebRequest WebReq = (HttpWebRequest)WebRequest.
+                Create(string.Format(WeatherApiForecast + city + WeatherApiSettings));
+
+                WebReq.Method = "GET";
+
+                HttpWebResponse WebResp = (HttpWebResponse)WebReq.GetResponse();
+
+                string jsonString;
+                using (Stream stream = WebResp.GetResponseStream())
+                {
+                    StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+                    jsonString = reader.ReadToEnd();
+                }
+
+                weatherResult = WeatherForecast.FromJson(jsonString);
+                weatherResult.RequestType = "OK";
+            }
+            catch (Exception e)
+            {
+                weatherResult = new WeatherForecast() { RequestType = BadRequest};
+            }
+
+            return weatherResult;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="ThumbnailCard"/>.
+        /// </summary>
+        /// <returns>A <see cref="ThumbnailCard"/> the user can view and/or interact with.</returns>
+        /// <remarks>Related types <see cref="CardImage"/>, <see cref="CardAction"/>,
+        /// and <see cref="ActionTypes"/>.</remarks>
+        private ThumbnailCard GetHeroCard(string city, CurrentWeather weather)
+        {
+            var heroCard = new ThumbnailCard
+            {
+                Title = $"Current weather in {city}:",
+                Subtitle = DateTime.Now.ToShortTimeString(),
+                Text = $"temperature {(int)weather.Main.Temp} °C" +
+                    $"\nhumidity {weather.Main.Humidity} %",
+                Images = new List<CardImage> { new CardImage("http://openweathermap.org/img/w/" + weather.Weather[0].Icon + ".png") },
+                Buttons = new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "More information", value: "https://openweathermap.org/find?q=" + city) },
+            };
+
+            return heroCard;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="ReceiptCard"/>.
+        /// </summary>
+        /// <returns>A <see cref="ReceiptCard"/> the user can view and/or interact with.</returns>
+        /// <remarks>Related types <see cref="CardImage"/>, <see cref="CardAction"/>,
+        /// <see cref="ActionTypes"/>, <see cref="ReceiptItem"/>, and <see cref="Fact"/>.</remarks>
+        private ReceiptCard GetReceiptCard(string city, WeatherForecast weatherForecast)
+        {
+            var weatherItems = new List<ReceiptItem>();
+            foreach (var item in weatherForecast.List)
+            {
+                string imageUrl = "http://openweathermap.org/img/w/" + item.Weather[0].Icon + ".png";
+                string temp = item.Main.Temp > 0 ? "+" + ((int)item.Main.Temp).ToString() : ((int)item.Main.Temp).ToString();
+                weatherItems.Add(new ReceiptItem(
+                    item.DtTxt.ToString(),
+                    price: temp,
+                    image: new CardImage(url: imageUrl)));
+            }
+
+            var receiptCard = new ReceiptCard
+            {
+                Title = $"Weather forecast in {city}:",
+                Items = weatherItems,
+                Buttons = new List<CardAction>
+                {
+                    new CardAction(
+                        ActionTypes.ImBack,
+                        "More information",
+                        "https://account.windowsazure.com/content/6.10.1.38-.8225.160809-1618/aux-pre/images/offer-icon-freetrial.png",
+                        "https://openweathermap.org/find?q=" + city),
+                },
+            };
+
+            return receiptCard;
         }
     }
 }

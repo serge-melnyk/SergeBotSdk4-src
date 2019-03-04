@@ -9,6 +9,8 @@ namespace BasicBot.Dialogs.Weather.Models
 {
     public partial class WeatherForecast
     {
+        public string RequestType { get; set; }
+
         [JsonProperty("cod")]
         [JsonConverter(typeof(ParseStringConverter))]
         public long Cod { get; set; }
