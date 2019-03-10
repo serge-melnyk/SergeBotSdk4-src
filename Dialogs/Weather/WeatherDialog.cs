@@ -284,15 +284,15 @@ namespace BasicBot.Dialogs.Weather
             CurrentWeather weatherResult = null;
             try
             {
-                HttpWebRequest WebReq = (HttpWebRequest)WebRequest.
+                HttpWebRequest webReq = (HttpWebRequest)WebRequest.
                 Create(string.Format(WeatherApiCurrent + city + WeatherApiSettings));
 
-                WebReq.Method = "GET";
+                webReq.Method = "GET";
 
-                HttpWebResponse WebResp = (HttpWebResponse)WebReq.GetResponse();
+                HttpWebResponse webResp = (HttpWebResponse)webReq.GetResponse();
 
                 string jsonString;
-                using (Stream stream = WebResp.GetResponseStream())
+                using (Stream stream = webResp.GetResponseStream())
                 {
                     StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8);
                     jsonString = reader.ReadToEnd();
@@ -314,15 +314,15 @@ namespace BasicBot.Dialogs.Weather
             WeatherForecast weatherResult = null;
             try
             {
-                HttpWebRequest WebReq = (HttpWebRequest)WebRequest.
+                HttpWebRequest webReq = (HttpWebRequest)WebRequest.
                 Create(string.Format(WeatherApiForecast + city + WeatherApiSettings));
 
-                WebReq.Method = "GET";
+                webReq.Method = "GET";
 
-                HttpWebResponse WebResp = (HttpWebResponse)WebReq.GetResponse();
+                HttpWebResponse webResp = (HttpWebResponse)webReq.GetResponse();
 
                 string jsonString;
-                using (Stream stream = WebResp.GetResponseStream())
+                using (Stream stream = webResp.GetResponseStream())
                 {
                     StreamReader reader = new StreamReader(stream, System.Text.Encoding.UTF8);
                     jsonString = reader.ReadToEnd();

@@ -27,6 +27,7 @@ namespace Microsoft.BotBuilderSamples
         public const string HelpIntent = "Help";
         public const string WeatherIntent = "Weather";
         public const string NoneIntent = "None";
+        public const string UpdateIntent = "Update";
 
         /// <summary>
         /// Key in the bot config (.bot file) for the LUIS instance.
@@ -201,6 +202,16 @@ namespace Microsoft.BotBuilderSamples
                 {
                     await dc.RepromptDialogAsync();
                 }
+
+                return true;        // Handled the interrupt.
+            }
+
+            if (topIntent.Equals(UpdateIntent))
+            {
+                await _dialogStateAccessor.SetAsync(dc.Context, new DialogState());
+                await _greetingStateAccessor.SetAsync(dc.Context, new GreetingState());
+                await _weatherStateAccessor.SetAsync(dc.Context, new WeatherState());
+                await dc.Context.SendActivityAsync("Updated.");
 
                 return true;        // Handled the interrupt.
             }
